@@ -4,7 +4,6 @@ import com.neonzoff.allocatedfilesaver.FileSaver;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.annotation.MultipartConfig;
 import java.io.*;
 import java.util.concurrent.*;
 
@@ -13,15 +12,9 @@ import java.util.concurrent.*;
  */
 @RestController
 @RequestMapping("file")
-@MultipartConfig(maxFileSize = 1024)
 public class FileController {
     private ExecutorService executorService = Executors.newFixedThreadPool(3);
-    private Future<Boolean> future1;
-    private Future<Boolean> future2;
-    private Future<Boolean> future3;
-    //    private CountDownLatch countDownLatch = new CountDownLatch(2);
-//    private CyclicBarrier cyclicBarrier = new CyclicBarrier(3, new SuccessMessage());
-    private CyclicBarrier cyclicBarrier = new CyclicBarrier(3);
+    private CountDownLatch countDownLatch = new CountDownLatch(2);
 
 
     @PostMapping()
@@ -29,15 +22,16 @@ public class FileController {
     String handleFileUpload(@RequestParam("file") MultipartFile file) {
         if (!file.isEmpty()) {
             try {
-                future1 = executorService.submit(new FileSaver(file.getOriginalFilename(), file.getBytes(), cyclicBarrier));
-                future2 = executorService.submit(new FileSaver(file.getOriginalFilename(), file.getBytes(), cyclicBarrier));
-                future3 = executorService.submit(new FileSaver(file.getOriginalFilename(), file.getBytes(), cyclicBarrier));
-                if (future1.get() && future2.get() ||
-                        future1.get() && future3.get() ||
-                        future2.get() && future3.get()) {
+                executorService.submit(new FileSaver(file.getOriginalFilename(), file.getBytes(), countDownLatch));
+                executorService.submit(new FileSaver(file.getOriginalFilename(), file.getBytes(), countDownLatch));
+                executorService.submit(new FileSaver(file.getOriginalFilename(), file.getBytes(), countDownLatch));
+                try {
+                    countDownLatch.await();
                     return "SUCCESS";
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
-            } catch (IOException | InterruptedException | ExecutionException e) {
+            } catch (IOException e) {
                 e.printStackTrace();
             } finally {
                 executorService.shutdown();

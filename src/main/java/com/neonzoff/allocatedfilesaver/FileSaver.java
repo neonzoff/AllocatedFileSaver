@@ -9,29 +9,28 @@ import java.util.concurrent.*;
 /**
  * @author Tseplyaev Dmitry
  */
-public class FileSaver implements Callable<Boolean> {
+public class FileSaver implements Runnable {
     private String fileName;
     private byte[] bytes;
-    private CyclicBarrier cyclicBarrier;
-//    private CountDownLatch countDownLatch;
+    private CountDownLatch countDownLatch;
 
-    public FileSaver(String fileName, byte[] bytes, CyclicBarrier cyclicBarrier) {
+    public FileSaver(String fileName, byte[] bytes, CountDownLatch countDownLatch) {
         this.fileName = fileName;
         this.bytes = bytes;
-        this.cyclicBarrier = cyclicBarrier;
-//        this.countDownLatch = countDownLatch;
+//        this.cyclicBarrier = cyclicBarrier;
+        this.countDownLatch = countDownLatch;
     }
 
     @Override
-    public Boolean call() {
+    public void run() {
         try (BufferedOutputStream stream = new BufferedOutputStream(
                 new FileOutputStream(
                         UUID.randomUUID() + fileName));) {
             stream.write(bytes);
-            cyclicBarrier.await();
-        } catch (IOException | BrokenBarrierException | InterruptedException e) {
+//            System.out.println("saved" + countDownLatch.getCount());
+            countDownLatch.countDown();
+        } catch (IOException e) {
             e.printStackTrace();
         }
-        return true;
     }
 }
